@@ -1,0 +1,1 @@
+cmake -DCPLEX_ROOT_DIR=/opt/ibm/ILOG/CPLEX_Studio221 -DCMAKE_PREFIX_PATH=/data/aschulz/Documents2023/cpp/mrfco/lib/libtorch ..
