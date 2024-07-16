@@ -6,12 +6,8 @@
 #include<memory>
 #include<random>
 #include<chrono>
-#include<thread>
-#include<utility>
 
 #include<torch/torch.h>
-
-#include"argparse.hpp"
 
 #include"metis_graph.h"
 #include"belief_propagation.h"
@@ -61,20 +57,7 @@ struct FactorGraph stack_fg(struct FactorGraph& fg1, struct FactorGraph& fg2) {
 	return fg;
 };
 
-void print_bp_edges(const struct FGEdges& e) {
-	cout << "r_edges = "   << e.r_edges.dtype()   << " " << e.r_edges.device() << endl << flush;
-	cout << "q_edges = "   << e.q_edges.dtype()   << " " << e.q_edges.device() << endl << flush;
-	cout << "m_edges = "   << e.m_edges.dtype()   << " " << e.m_edges.device() << endl << flush;
-	cout << "f2v_edges = " << e.f2v_edges.dtype() << " " << e.f2v_edges.device() << endl << flush;
-	cout << "vm_edges = "  << e.vm_edges.dtype()  << " " << e.vm_edges.device() << endl << flush;
-	cout << "num_vars = "  << e.num_vars.dtype()  << " " << e.num_vars.device() << endl << flush;
-	cout << "num_ss = "    << e.num_ss.dtype()    << " " << e.num_ss.device() << endl << flush;
-	cout << "num_fact = "  << e.num_fact.dtype()  << " " << e.num_fact.device() << endl << flush;
-
-}
-
 struct FGEdges stack_bpedges(const struct FGEdges& edges1, const struct FGEdges& edges2, struct FactorGraph& fg1, struct FactorGraph& fg2) {
-	torch::Device device = edges1.r_edges.device();
 	struct FGEdges edges(edges1);
 	long int num_f2v_subsum = edges1.f2v_edges.index({Slice(),0}).max().item<int>()+1;
 	long int num_f2v_messages_1 = fg1.num_f2v_messages();
@@ -82,32 +65,26 @@ struct FGEdges stack_bpedges(const struct FGEdges& edges1, const struct FGEdges&
 	long int num_ss_1 = fg1.num_sufficient_statistics();
 	long int num_ss_2 = fg2.num_sufficient_statistics();
 
-
-	Tensor r_offsets = tensor({num_f2v_messages_1,num_f2v_subsum}, {device}).to(torch::kLong);
-	Tensor q_offsets = tensor({num_f2v_messages_1,num_f2v_messages_1}, {device}).to(torch::kLong);
-	Tensor f2v_offsets_11 = tensor({num_f2v_subsum, num_ss_1}, {device});
-	Tensor f2v_offsets_12 = tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1}, {device});
-	Tensor f2v_offsets_21 = tensor({num_f2v_subsum, num_ss_1}, {device});
-	Tensor f2v_offsets_22 = tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1}, {device});
-	Tensor m_offsets = tensor({num_ss_1, num_f2v_messages_1}, {device}).to(torch::kLong);
-	Tensor vm_offsets = tensor({2*fg1.n, num_f2v_messages_1}, {device}).to(torch::kLong);
+	Tensor r_offsets = tensor({num_f2v_messages_1,num_f2v_subsum});
+	Tensor q_offsets = tensor({num_f2v_messages_1,num_f2v_messages_1});
+	Tensor f2v_offsets_11 = tensor({num_f2v_subsum, num_ss_1});
+	Tensor f2v_offsets_12 = tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1});
+	Tensor f2v_offsets_21 = tensor({num_f2v_subsum, num_ss_1});
+	Tensor f2v_offsets_22 = tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1});
+	Tensor m_offsets = tensor({num_ss_1, num_f2v_messages_1});
+	Tensor vm_offsets = tensor({2*fg1.n, num_f2v_messages_1});
 
 	edges.r_edges = torch::concatenate({edges.r_edges, edges2.r_edges + r_offsets}, 0);
 	edges.q_edges = torch::concatenate({edges.q_edges, edges2.q_edges + q_offsets}, 0);
 	Tensor tmp_f2v_edges_1 = edges.f2v_edges;
 	Tensor idx0_more = (tmp_f2v_edges_1.index({Slice(),1}) >= num_ss_1);
 
-	tmp_f2v_edges_1.index_put_({ idx0_more, Slice()}, tmp_f2v_edges_1.index({ idx0_more, Slice()}) + tensor({(long int)0, num_ss_2}, {device}).to(torch::kLong));//.add_(tensor({(long int)0, num_ss_1+num_ss_2}));
-
+	tmp_f2v_edges_1.index_put_({ idx0_more, Slice()}, tmp_f2v_edges_1.index({ idx0_more, Slice()}) + tensor({(long int)0, num_ss_2}));//.add_(tensor({(long int)0, num_ss_1+num_ss_2}));
 	Tensor tmp_f2v_edges_2 = edges2.f2v_edges.clone();
-
 	Tensor idx_less = (tmp_f2v_edges_2.index({Slice(),1}) < num_ss_2);
-
 	Tensor idx_more = (tmp_f2v_edges_2.index({Slice(),1}) >= num_ss_2 );
-
-	tmp_f2v_edges_2.index_put_({ idx_less, Slice()}, tmp_f2v_edges_2.index({ idx_less, Slice()}) + tensor({num_f2v_subsum, num_ss_1}, {device}).to(torch::kLong));
-
-	tmp_f2v_edges_2.index_put_({ idx_more, Slice()}, tmp_f2v_edges_2.index({ idx_more, Slice()}) + tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1}, {device}).to(torch::kLong));
+	tmp_f2v_edges_2.index_put_({ idx_less, Slice()}, tmp_f2v_edges_2.index({ idx_less, Slice()}) + tensor({num_f2v_subsum, num_ss_1}));
+	tmp_f2v_edges_2.index_put_({ idx_more, Slice()}, tmp_f2v_edges_2.index({ idx_more, Slice()}) + tensor({num_f2v_subsum, num_ss_1+num_f2v_messages_1}));
 
 	edges.f2v_edges = torch::concatenate({tmp_f2v_edges_1, tmp_f2v_edges_2}, 0);
 	edges.m_edges = torch::concatenate({edges.m_edges, edges2.m_edges+m_offsets});
@@ -117,13 +94,8 @@ struct FGEdges stack_bpedges(const struct FGEdges& edges1, const struct FGEdges&
 	edges.num_ss = torch::concatenate({edges1.num_ss,edges2.num_ss});
 	edges.num_fact = torch::concatenate({edges1.num_fact,edges2.num_fact});
 
-
-	//print_bp_edges(edges);
-
 	return edges;
 };
-
-
 
 
 struct FactorGraph copy(const struct FactorGraph& fg) {
@@ -159,14 +131,6 @@ struct MISGNNData {
 	struct FGEdges bp_edges;
 	struct FactorGraph fg;
 	int n,m;
-
-	MISGNNData() {
-		//cout << "MISGNNData empty constructor" << endl;
-	};
-	MISGNNData(const struct MISGNNData& other) : edge_index(other.edge_index), x(other.x), y(other.y), var_mask(other.var_mask), var_marginal_mask(other.var_marginal_mask), bp_edges(other.bp_edges), fg(other.fg), n(other.n), m(other.m)	{
-		//cout << "MISGNNData copy constructor" << endl;
-	};
-
 
 	void to(torch::Device device) {
 		edge_index = edge_index.to(device);
@@ -260,19 +224,24 @@ struct MISGNNData {
 
 };
 
-using Data = std::vector<pair<MISGNNData, torch::Tensor> >;
+using Data = std::vector<path>;
 using MISGNNExample = torch::data::Example<MISGNNData, torch::Tensor>;
 
 class MISGNNDataset : public torch::data::datasets::Dataset<MISGNNDataset, MISGNNExample > {
 	using Example = MISGNNExample;
 	using Batch = vector<Example>;
 	using BatchRequest = c10::ArrayRef<size_t>;
-	const vector<pair<MISGNNData, torch::Tensor> > data;
+	//const vector<pair<MISGNNData, torch::Tensor> > data;
+	const vector<path> data;
 
 	public:
 		MISGNNDataset(const Data& data) : data(data) {}
 		Example get(size_t index) {
-			return Example(data[index].first, data[index].second);
+			path graph_path = data[index];
+			path feature_path = replace_all(graph_path.string(),".graph", "_features.csv");
+			path solution_path = replace_all(graph_path.string(),".graph", ".sol");
+			MISGNNData mis = MISGNNData::load(graph_path.string(), feature_path.string(), solution_path.string());
+			return Example(mis, mis.y);
 		}
 		Batch get_batch(BatchRequest request) {
 			return torch::data::datasets::Dataset<MISGNNDataset,Example>::get_batch(request);
@@ -304,10 +273,11 @@ struct MISGNNStack : public torch::data::transforms::Stack<> {
 		auto batch_start = high_resolution_clock::now();
 		torch::Device device = torch::kCPU;
 		if (torch::cuda::is_available()) {
+			//std::cout << "CUDA is available! Training on GPU." << std::endl;
 			device = torch::kCUDA;
 		}
 
-		//cout << "thread : " << std::this_thread::get_id() << " in apply_batch bs = " << examples.size() << " " << device << endl;
+		//cout << "in apply_batch" << endl;
 		if(examples.size()==1) return examples[0]; // TODO : device
 		//vector<MISGNNData> test;
 		//transform(examples.begin(), examples.end(), back_inserter(test), [](const MISGNNExample &p) {return p.data;});
@@ -329,7 +299,6 @@ struct MISGNNStack : public torch::data::transforms::Stack<> {
 			var_mask_n += ex.data.var_mask.size(0);
 			var_marginal_mask_n += ex.data.var_marginal_mask.size(0);
 		}
-
 		auto l_opts = TensorOptions().dtype(kLong).device(device);
 		auto b_opts = TensorOptions().dtype(kBool).device(device);
 		Tensor x = torch::zeros({x_n, x_dim}, {device}),
@@ -339,26 +308,29 @@ struct MISGNNStack : public torch::data::transforms::Stack<> {
 		       var_marginal_mask = torch::zeros({var_marginal_mask_n}, b_opts);
 		//vector<struct FGEdges> bp_edges_list = {examples[0].data.bp_edges};
 		//vector<struct FactorGraph> fg_list = {examples[0].data.fg};
-
 		int c = 0, n = 0, m = 0;
 		uint64_t vertex_offset=0;
 		struct FGEdges bp_edges;
 		struct FactorGraph fg;
 		for(auto & ex : examples) {
-
+			//cout << ex.data.x.sizes() << " " << ex.data.n+ex.data.m << endl;
 			//x_list.push_back(ex.data.x);
 			x.index_put_({Slice(x_offset, x_offset+ex.data.x.size(0)), Slice()},ex.data.x.to(device));
-
+			//cout << "x" << endl;
 			x_offset += ex.data.x.size(0);
+			//cout << "edge_index" << endl;
 
 			edge_index.index_put_({Slice(edge_index_offset, edge_index_offset+ex.data.edge_index.size(0)), Slice()}, ex.data.edge_index.to(device) + vertex_offset);
 			edge_index_offset += ex.data.edge_index.size(0);
+			//cout << "target" << endl;
 
 			target.index_put_({Slice(y_offset, y_offset+ex.target.size(0))}, ex.target.to(device));
 			y_offset += ex.target.size(0);
+			//cout << "var_mask" << endl;
 
 			var_mask.index_put_({Slice(var_mask_offset, var_mask_offset+ex.data.var_mask.size(0))}, ex.data.var_mask.to(device));
 			var_mask_offset += ex.data.var_mask.size(0);
+			//cout << "var_marginal_mask" << endl;
 
 			var_marginal_mask.index_put_({Slice(var_marginal_mask_offset, var_marginal_mask_offset+ex.data.var_marginal_mask.size(0))}, ex.data.var_marginal_mask.to(device));
 			var_marginal_mask_offset += ex.data.var_marginal_mask.size(0);
@@ -372,22 +344,15 @@ struct MISGNNStack : public torch::data::transforms::Stack<> {
 			//var_marginal_mask_list.push_back(ex.data.var_marginal_mask);
 			if(c==0) {
 				bp_edges = copy(ex.data.bp_edges);
-
 				fg = copy(ex.data.fg);
-
 			} else {
-
 				bp_edges = stack_bpedges(bp_edges, ex.data.bp_edges, fg, ex.data.fg);
-
 				fg = stack_fg(fg, ex.data.fg);
-
 			}
-
 			n += ex.data.n;
 			m += ex.data.m;
 			vertex_offset += ex.data.edge_index.max().item<int>()+1;
 			c++;
-
 		}
 
 		// Version 0
@@ -433,9 +398,10 @@ struct MISGNNStack : public torch::data::transforms::Stack<> {
 		ndata.m = m;
 		ndata.fg = fg;
 		ndata.bp_edges = bp_edges;
+		//cout << "out apply batch" << endl;
 		auto stop = high_resolution_clock::now();
 		auto duration = duration_cast<microseconds>(stop - batch_start);
-		//cout << "thread : " << std::this_thread::get_id() << " apply batch " << duration.count() << " bs " << examples.size() << endl;
+		//cout << "apply batch " << duration.count() << endl;
 
 		ndata.to(device);
 
@@ -496,7 +462,7 @@ struct FactorThetaPredictor : torch::nn::Module {
 	torch::nn::Linear fc1{nullptr}, fc2{nullptr};
 };
 
-vector<std::pair<MISGNNData,Tensor> > load_dataset(path dataset_path, torch::Device device) {
+vector<std::pair<MISGNNData,Tensor> > load_dataset(path dataset_path) {
 	vector<std::pair<MISGNNData,Tensor> > dataset;
 	for(const auto& entry : directory_iterator(dataset_path)) {
 		if(endswith(entry.path().string(), ".graph")) {
@@ -504,16 +470,23 @@ vector<std::pair<MISGNNData,Tensor> > load_dataset(path dataset_path, torch::Dev
 			path feature_path = replace_all(graph_path.string(),".graph", "_features.csv");
 			path solution_path = replace_all(graph_path.string(),".graph", ".sol");
 			MISGNNData mis = MISGNNData::load(graph_path.string(), feature_path.string(), solution_path.string());
-			mis.to(device);
-			//cout << "before dataset.push_back" << endl;
 			dataset.push_back(std::pair<MISGNNData,Tensor>(mis,mis.y));
-			//cout << "after dataset.push_back" << endl;
-
 		}
 	}
 	return dataset;
 
 };
+
+vector<path> load_dataset_paths(path dataset_path) {
+	vector<path> dataset;
+	for(const auto& entry : directory_iterator(dataset_path)) {
+		if(endswith(entry.path().string(), ".graph")) {
+			dataset.push_back(entry.path());
+		}
+	}
+	return dataset;
+};
+
 
 template<typename T> float mean(vector<T>& vals) {
 	float ans= 0;
@@ -524,127 +497,42 @@ template<typename T> float mean(vector<T>& vals) {
 };
 
 int main(int argc, char ** argv) {
-	// argument parser
-	argparse::ArgumentParser parser("mis_train");
-	parser.add_argument("dataset_path")
-		.help("dataset path, should contain 'train' and 'test' subdirectories");
-	parser.add_argument("-l", "--lr")
-		.help("learning rate (default: 1e-5)")
-		.default_value(1e-5)
-		.scan<'g',double>();
-	parser.add_argument("-e","--epochs")
-		.help("maximum number of epochs (default: 1000)")
-		.default_value(1000)
-		.scan<'i',int>();
-	parser.add_argument("-b","--batch-size")
-		.help("batch size (default: 1)")
-		.default_value(1)
-		.scan<'i',int>();
-	parser.add_argument("-n","--num-workers")
-		.help("number of workers (default: 0)")
-		.default_value(0)
-		.scan<'i',int>();
-	parser.add_argument("-o", "--output")
-		.help("output director (default: 'output')")
-		.default_value("output");
-	parser.add_argument("-y", "--overwrite")
-		.help("overwrite existing outputs (default: false)")
-		.implicit_value(true)
-		.default_value(false);
-	parser.add_argument("-s", "--split")
-		.help("validation split (default: 0.2)")
-		.default_value(0.2)
-		.scan<'g',double>();
-	parser.add_argument("--load-model")
-		.help("load model from checkpoint (default: None)")
-		.default_value("");
-
-
-	try {
-		parser.parse_args(argc, argv);
-	} catch (const std::exception& err) {
-		std::cerr << err.what() << endl;
-		std::cerr << parser;
-		return 1;
-	}
-
-
-
 	// dataset path
-	path dataset_path = parser.get<string>("dataset_path");
-	path output_dir = parser.get<string>("--output");
-	path model_path = parser.get<string>("--load-model");
-	double lr = parser.get<double>("--lr");
-	int batch_size = parser.get<int>("--batch-size");
-	int max_epochs = parser.get<int>("--epochs");
-	int num_workers = parser.get<int>("--num-workers");
-	bool overwrite = parser.get<bool>("--overwrite");
-	double val_split = parser.get<double>("--split");
+	//path dataset_path = "mis_er_n50-100_p0.15";
+	path dataset_path = "mis_er_n5-8_p0.15";
+	double lr = 1e-4;
+	int batch_size = 1;
+	int max_epochs = 10000;
+	int num_workers = 1;
+	if(argc>=2) dataset_path = path(argv[1]);
+	if(argc>=3) lr = atof(argv[2]);
+	if(argc>=4) batch_size = atoi(argv[3]);
+	if(argc>=5) max_epochs = atoi(argv[4]);
 
 	torch::Device device = torch::kCPU;
 	if (torch::cuda::is_available()) {
+		std::cout << "CUDA is available! Training on GPU." << std::endl;
 		device = torch::kCUDA;
 	}
 
-	path checkpoint_dir = output_dir / "checkpoints";
-	path loss_file_path = output_dir / "loss.csv";
-
-	// Training summary
-	cout << "Summary" << endl;
-	cout << "\tDataset path    : " << dataset_path << endl;
-	cout << "\tCheckpoint dir  : " << checkpoint_dir << endl;
-	cout << "\tLoss file path  : " << loss_file_path << endl;
-	cout << "\tLearning rate   : " << lr << endl;
-	cout << "\tBatch size      : " << batch_size << endl;
-	cout << "\tMax epochs      : " << max_epochs << endl;
-	cout << "\tNum workers     : " << num_workers << endl;
-	cout << "\tValidation split: " << val_split << endl;
-	cout << "\tDevice          : " << device << endl << endl;
-	if(model_path.string().length()>0) {
-		if(exists(model_path)) cout << "Loading model from '" << model_path << "'" << endl;
-		else cout << "Model path '" << model_path << "' not found. Initializing new model." << endl;
-	}
-
-	//initialize model
-	auto mnet = make_shared<struct FactorThetaPredictor>();
-	mnet->to(device);
-
-	torch::optim::Adam optimizer(mnet->parameters(), /*lr=*/lr);
-	if(exists(model_path)) {
-		torch::load(mnet, model_path);
-	}
-
-	// check output directory and file
-	if(exists(checkpoint_dir) || exists(loss_file_path)) {
-		if(!overwrite) {
-			string ans;
-			cout << "Outputs already exist. Overwrite ? [y/n] ";
-			cin >> ans;
-			if(ans.compare("y")!=0) return 2;
-		}
-		// remove
-		if(exists(checkpoint_dir)) remove_all(checkpoint_dir);
-		if(exists(loss_file_path)) remove(loss_file_path);
-	}
-	if(!exists(output_dir)) create_directories(output_dir);
-	create_directory(checkpoint_dir);
 
 	path train_dataset_path = dataset_path / "train";
+	path test_dataset_path = dataset_path / "test";
 
 	// load datasets
-	vector<std::pair<MISGNNData,Tensor> > train_data;
+	//vector<MISGNNData> train_data, test_data;
+	vector<std::pair<MISGNNData,Tensor> > test_data;
+	vector<path> train_data_paths;
 	cout << "Loading train data..." << flush;
-	train_data = load_dataset(train_dataset_path, device);
-	cout << "done" << endl;
-	// split dataset
-	size_t val_n = (size_t)(val_split * train_data.size());
-	vector<std::pair<MISGNNData,Tensor> > val_data(train_data.end() - val_n, train_data.end());
-	train_data = vector<std::pair<MISGNNData,Tensor> >(train_data.begin(), train_data.begin()+(train_data.size() - val_n));
-	
-	//test_data = load_dataset(test_dataset_path, device);
-	auto train_set = MISGNNDataset(train_data).map(MISGNNStack());
-	cout << "Train data size     : " << train_data.size() << endl;
-	cout << "Validation data size: " << val_data.size() << endl;
+	train_data_paths = load_dataset_paths(train_dataset_path);
+	cout << "done" << endl << "Loading test data..." << flush;
+	test_data = load_dataset(test_dataset_path);
+	cout << "done" << endl << flush;
+	//
+	auto train_set = MISGNNDataset(train_data_paths).map(MISGNNStack());
+
+	auto train_size = train_set.size().value();
+	cout << "Train_size = " << train_size << endl;
 
 	auto train_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
                             std::move(train_set), 
@@ -655,6 +543,25 @@ int main(int argc, char ** argv) {
 	//auto train_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
         //                    std::move(train_set), batch_size);
 
+	//initialize model
+	//auto mnet = std::make_shared<MPNet>(3,3,3);
+	//auto mnet = std::make_shared<struct MPS>();
+
+	//auto rng = std::default_random_engine {};
+	auto mnet = make_shared<struct FactorThetaPredictor>();
+	mnet->to(device);
+
+	torch::optim::Adam optimizer(mnet->parameters(), /*lr=*/lr);
+
+	path loss_file = "train_loss.txt";
+	if(exists(loss_file)) remove(loss_file);
+
+
+	path checkpoint_dir = "mis_train_checkpoints";
+	//torch::load(mnet, "mis_train_checkpoints/checkpoint_e1.pt");
+	//return 0;
+	if(exists(checkpoint_dir)) remove_all(checkpoint_dir);
+	create_directory(checkpoint_dir);
 
 	for(int epoch=0;epoch<max_epochs;epoch++) {
 		//std::shuffle(std::begin(train_data), std::end(train_data), rng);
@@ -669,14 +576,20 @@ int main(int argc, char ** argv) {
 			Tensor xx = batch.data.x.detach().clone();
 			Tensor pred = mnet->forward(xx, batch.data.edge_index, batch.data);
 			Tensor strd = torch::zeros({batch.data.bp_edges.num_ss.sum().item<int>()}).to(torch::kBool);
-
+			//int offset = 0;
+			//for(int i=0;i<batch.data.bp_edges.num_vars.size(0);i++) {
+			//	int n = batch.data.bp_edges.num_vars[i].item<int>();
+			//	strd.index_put_({Slice(offset,offset+2*n)}, tensor({0,1}).to(torch::kBool).repeat(n));
+			//	offset += batch.data.bp_edges.num_ss[i].item<int>();
+			//}
+			//cout << strd.size(0) << " " << batch.data.var_marginal_mask.size(0) << " " << batch.data.bp_edges.num_ss.sum().item<int>() << endl;
+			//cout << torch::all(strd.to(device) == batch.data.var_marginal_mask) << endl;
 
 			Tensor loss = torch::binary_cross_entropy(
 					//pred.index({strd.to(device)}).clamp_(0,1),
 					pred.index({batch.data.var_marginal_mask}).clamp(0,1),
 					batch.data.y.to(torch::kFloat).clamp(0,1)
 					);
-
 			epoch_train_losses.push_back(loss.item<float>());
 			loss.backward();
 
@@ -689,14 +602,17 @@ int main(int argc, char ** argv) {
 
  		torch::autograd::GradMode::set_enabled(false);
 		auto val_start = high_resolution_clock::now();
-		for(std::pair<MISGNNData,Tensor> & data : val_data) {
+		for(std::pair<MISGNNData,Tensor> & data : test_data) {
 			data.first.to(device);
 			Tensor xx = data.first.x.detach().clone();//.to(device);
-
-
 			Tensor pred = mnet->forward(xx, data.first.edge_index, data.first);
-
 			Tensor strd = torch::zeros({data.first.bp_edges.num_ss.sum().item<int>()}).to(kBool);
+			//int offset = 0;
+			//for(int i=0;i<data.first.bp_edges.num_vars.size(0);i++) {
+			//	int n = data.first.bp_edges.num_vars[i].item<int>();
+			//	strd.index_put_({Slice(offset,offset+2*n)}, tensor({0,1}).to(kBool).repeat(n));
+			//	offset += data.first.bp_edges.num_ss[i].item<int>();
+			//}
 
 
 			//Tensor marge = pred.index({strd.to(device)}).clamp_(0,1);
@@ -705,7 +621,6 @@ int main(int argc, char ** argv) {
 					pred.index({data.first.var_marginal_mask}).clamp(0,1),
 					data.first.y.to(torch::kFloat).clamp(0,1)
 					);
-
 			epoch_val_losses.push_back(loss.item<float>());
 
 		}
@@ -718,7 +633,7 @@ int main(int argc, char ** argv) {
 		cout << "Epoch " << epoch << " train_loss = " << mean_train_loss << " val_loss = " << mean_val_loss << " train_t = " << train_duration.count() << " val_t = " << val_duration.count() << endl;
 
 		ofstream myfile;
-		myfile.open(loss_file_path, ios::app);
+		myfile.open(loss_file, ios::app);
   		myfile << epoch << "," << mean_train_loss << "," << mean_val_loss << "," << train_duration.count() << "," << val_duration.count() << endl;
   		myfile.close();
 

@@ -1,0 +1,1 @@
+../../cmake_install/cmake-3.30.0/bin/cmake -DCMAKE_PREFIX_PATH=/users/schulz/dogm/lib/libtorch ..

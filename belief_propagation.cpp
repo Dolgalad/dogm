@@ -93,12 +93,10 @@ Tensor loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, Factor
 	        u = (mup - mu).abs().max().item<float>();
 	    
 	        if(torch::any(torch::isinf(mup)).item<int>() || torch::any(torch::isnan(mup)).item<int>()) {
-			//cout << t << " encountered bad value" << endl;
 			break;
 		}
 	        mu = mup;
 	        if(u < tol) {
-			//cout << t << " tolerance reached " << u << " " << endl;
 			break;
 		}
 		t++;
@@ -106,6 +104,7 @@ Tensor loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, Factor
 	//if(t == max_iter) {
 	//	cout << "max iter reached  " << endl;
 	//}
+
 	if(mode.compare("max_sum")==0) {
 		return torch::reshape(mu, {fg.n,2});
 	}

@@ -24,6 +24,7 @@ struct FactorGraph {
 
 	FactorGraph() {};
 	FactorGraph(const FactorGraph& fg) {
+		//cout << "FactorGraph copy constructor" << endl << flush;
 		n = fg.n;
 		nF = fg.nF;
 		factor_neighbors = vector<vector<long int> >(fg.factor_neighbors.begin(), fg.factor_neighbors.end());
@@ -111,8 +112,11 @@ struct FGEdges {
 	Tensor r_edges, q_edges, f2v_edges, m_edges, vm_edges;
 	Tensor num_vars, num_ss, num_fact;
 
-	FGEdges() {};
+	FGEdges() {
+		//cout << "FGEdges new constructor" << endl;
+	};
 	FGEdges(const struct FGEdges& fe) {
+		//cout << "FGEdges copy constructor" << endl;
 		r_edges = fe.r_edges.clone();
 		q_edges = fe.q_edges.clone();
 		f2v_edges = fe.f2v_edges.clone();
@@ -142,7 +146,7 @@ struct FGEdges {
 
 		long int f2v_edges_n = fg.num_f2v_edges(), f2v_edges_c=0;
 		f2v_edges = torch::zeros({f2v_edges_n,2}).to(torch::kLong);
-	
+
 		long int r_edges_n = fg.num_r_edges(), r_edges_c=0;
 		r_edges = torch::zeros({r_edges_n,2}).to(torch::kLong);
 
@@ -222,6 +226,7 @@ struct FGEdges {
 				}
 			}
 		}
+
 	};
 };
 
