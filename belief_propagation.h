@@ -47,7 +47,7 @@ struct FGEdges {
 
 	FGEdges();
 	FGEdges(const struct FGEdges& fe);
-	void to(torch::Device device, bool pin_memory);
+	void to(torch::Device& device, bool pin_memory);
 
 	void make_edges(struct FactorGraph& fg);
 };

@@ -14,7 +14,7 @@
 #include"argparse.hpp"
 
 #include"metis_graph.h"
-#include"belief_propagation2.h"
+#include"belief_propagation.h"
 #include"message_passing.h"
 
 using namespace std;

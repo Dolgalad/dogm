@@ -52,13 +52,13 @@ struct MISGNNData {
 	};
 
 
-	void to(torch::Device device) {
-		edge_index = edge_index.to(device);
-		x = x.to(device);
-		y = y.to(device);
-		var_mask = var_mask.to(device);
-		var_marginal_mask = var_marginal_mask.to(device);
-		bp_edges->to(device);
+	void to(torch::Device device, bool pin_memory=false) {
+		edge_index = edge_index.to(device, pin_memory);
+		x = x.to(device, pin_memory);
+		y = y.to(device, pin_memory);
+		var_mask = var_mask.to(device, pin_memory);
+		var_marginal_mask = var_marginal_mask.to(device, pin_memory);
+		bp_edges->to(device, pin_memory);
 	}
 
 	void load_graph(path filename) {

@@ -1,4 +1,4 @@
-#include"belief_propagation2.h"
+#include"belief_propagation.h"
 
 using namespace std::chrono;
 
@@ -130,7 +130,7 @@ FGEdges::FGEdges(const struct FGEdges& fe) {
 	v_ss_index_mask = fe.v_ss_index_mask.clone();
 }
 
-void FGEdges::to(torch::Device device, bool pin_memory=false) {
+void FGEdges::to(torch::Device& device, bool pin_memory=false) {
 	r_edges = r_edges.to(device,pin_memory);
 	q_edges = q_edges.to(device,pin_memory);
 	f2v_edges = f2v_edges.to(device, pin_memory);
@@ -177,7 +177,7 @@ void FGEdges::make_edges(struct FactorGraph& fg) {
 	num_f2v_msg = torch::tensor({fg.num_f2v_messages()}).to(torch::kLong);
 
 	long int iV;
-	long unsigned int iF;
+	long int iF;
 	long unsigned int vnii, fni;
 	int vni, in, yvi, iu, factor_size, vneighbor, fneighbor, iidx, v;
 	vector<long int> * factor_neighbors; 
@@ -273,7 +273,6 @@ void FGEdges::make_edges(struct FactorGraph& fg) {
 	v_ss_index_mask.index_put_({Slice(0,2*fg.n)}, v_ss_index_mask.index({Slice(0,2*fg.n)}).logical_not());
 
 	vector<long int> factor_value_sizes = fg.factor_value_sizes();
-	auto opts1 = torch::TensorOptions().dtype(torch::kLong);
 	m_stride = torch::from_blob(factor_value_sizes.data(), {(long int)factor_value_sizes.size()}, {torch::kLong}).clone();
 }
 
@@ -284,8 +283,8 @@ Tensor sum_product_loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& e
 	torch::Device device = theta.device();
 
 	int nSS = edges.num_ss.sum().item<int>();
-	int nVars = edges.num_vars.sum().item<int>();
-	int nNodes = (edges.num_vars + edges.num_fact).sum().item<int>();
+	//int nVars = edges.num_vars.sum().item<int>();
+	//int nNodes = (edges.num_vars + edges.num_fact).sum().item<int>();
 	int n_f2v_subsum = edges.f2v_edges.index({Slice(),0}).max().item<int>()+1;
 	int q_n = q.size(0)/2;
 
