@@ -10,7 +10,9 @@ set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX   "-isystem ")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "${CMAKE_CURRENT_SOURCE_DIR}/build")
 set(LINKER_OPTIONS                  -flto -Wl,--no-as-needed)
 
-set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.1/bin/nvcc)
+if(EXISTS /usr/local/cuda-12.1/bin/nvcc)
+    set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.1/bin/nvcc)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     set(CMAKE_CXX_FLAGS_DEBUG       "${CMAKE_CXX_FLAGS_DEBUG} -save-temps=obj")
