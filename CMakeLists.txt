@@ -60,33 +60,32 @@ add_library(BeliefPropagation SHARED belief_propagation.cpp)
 target_link_libraries(BeliefPropagation PRIVATE "${TORCH_LIBRARIES}")
 set_property(TARGET BeliefPropagation PROPERTY CXX_STANDARD 17)
 
-#add_executable(mis_train mis_train.cpp)
-#target_link_libraries(mis_train PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET mis_train PROPERTY CXX_STANDARD 17)
-#target_link_libraries(mis_train PUBLIC BeliefPropagation)
-#
-#
-#add_executable(mis_train_lazy mis_train_lazy.cpp)
-#target_link_libraries(mis_train_lazy PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET mis_train_lazy PROPERTY CXX_STANDARD 17)
-#target_link_libraries(mis_train_lazy PUBLIC BeliefPropagation)
-#
-#add_executable(mis_train_nocopy mis_train_nocopy.cpp)
-#target_link_libraries(mis_train_nocopy PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET mis_train_nocopy PROPERTY CXX_STANDARD 17)
-#target_link_libraries(mis_train_nocopy PUBLIC BeliefPropagation)
-#
-#add_executable(mis_train_lazy_nocopy mis_train_lazy_nocopy.cpp)
-#target_link_libraries(mis_train_lazy_nocopy PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET mis_train_lazy_nocopy PROPERTY CXX_STANDARD 17)
-#target_link_libraries(mis_train_lazy_nocopy PUBLIC BeliefPropagation)
-#
-#add_executable(chkpt2cpu chkpt2cpu.cpp)
-#target_link_libraries(chkpt2cpu PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET chkpt2cpu PROPERTY CXX_STANDARD 17)
-#
-#add_executable(test_mplbp test_mplbp.cpp)
-#target_link_libraries(test_mplbp PRIVATE "${TORCH_LIBRARIES}")
-#set_property(TARGET test_mplbp PROPERTY CXX_STANDARD 17)
-#target_link_libraries(test_mplbp PUBLIC BeliefPropagation)
+add_executable(mis_train mis_train.cpp)
+target_link_libraries(mis_train PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET mis_train PROPERTY CXX_STANDARD 17)
+target_link_libraries(mis_train PUBLIC BeliefPropagation)
+
+add_executable(mis_train_lazy mis_train_lazy.cpp)
+target_link_libraries(mis_train_lazy PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET mis_train_lazy PROPERTY CXX_STANDARD 17)
+target_link_libraries(mis_train_lazy PUBLIC BeliefPropagation)
+
+add_executable(mis_train_nocopy mis_train_nocopy.cpp)
+target_link_libraries(mis_train_nocopy PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET mis_train_nocopy PROPERTY CXX_STANDARD 17)
+target_link_libraries(mis_train_nocopy PUBLIC BeliefPropagation)
+
+add_executable(mis_train_lazy_nocopy mis_train_lazy_nocopy.cpp)
+target_link_libraries(mis_train_lazy_nocopy PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET mis_train_lazy_nocopy PROPERTY CXX_STANDARD 17)
+target_link_libraries(mis_train_lazy_nocopy PUBLIC BeliefPropagation)
+
+add_executable(chkpt2cpu chkpt2cpu.cpp)
+target_link_libraries(chkpt2cpu PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET chkpt2cpu PROPERTY CXX_STANDARD 17)
+
+add_executable(test_mplbp test_mplbp.cpp)
+target_link_libraries(test_mplbp PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET test_mplbp PROPERTY CXX_STANDARD 17)
+target_link_libraries(test_mplbp PUBLIC BeliefPropagation)
 
