@@ -30,6 +30,11 @@ INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
+add_library(BeliefPropagation SHARED belief_propagation.cpp)
+target_link_libraries(BeliefPropagation PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET BeliefPropagation PROPERTY CXX_STANDARD 17)
+
+
 if(CPLEX_FOUND AND Boost_FOUND)
     add_executable(torch_boost_cplex_example torch_boost_cplex_example.cpp )
     target_link_libraries(torch_boost_cplex_example PRIVATE ${CPLEX_LIBRARIES})
@@ -43,6 +48,16 @@ if(CPLEX_FOUND AND Boost_FOUND)
     target_link_libraries(  mis_er_dataset PRIVATE ${CPLEX_LIBRARIES})
     target_link_libraries(  mis_er_dataset PRIVATE dl)
 
+    add_executable(mis_test_nocopy mis_test_nocopy.cpp mis.cpp)
+    target_link_libraries(mis_test_nocopy PRIVATE "${TORCH_LIBRARIES}")
+    target_link_libraries(mis_test_nocopy PRIVATE "${TORCH_CUDA_LIBRARIES}")
+    target_link_libraries(mis_test_nocopy PUBLIC BeliefPropagation)
+    set_property(TARGET mis_test_nocopy PROPERTY CXX_STANDARD 17)
+    target_link_libraries(mis_test_nocopy PRIVATE ${CPLEX_LIBRARIES})
+    target_link_libraries(mis_test_nocopy PRIVATE dl)
+    target_link_libraries(mis_test_nocopy LINK_PUBLIC ${Boost_LIBRARIES})
+
+
 endif()
 
 if(Boost_FOUND)
@@ -53,12 +68,13 @@ if(Boost_FOUND)
     target_link_libraries(test_dataset PRIVATE "${TORCH_LIBRARIES}")
     target_link_libraries(test_dataset LINK_PUBLIC ${Boost_LIBRARIES})
 
+    add_executable(test test.cpp)
+    target_link_libraries(test_dataset LINK_PUBLIC ${Boost_LIBRARIES})
+
 endif()
 
 
-add_library(BeliefPropagation SHARED belief_propagation.cpp)
-target_link_libraries(BeliefPropagation PRIVATE "${TORCH_LIBRARIES}")
-set_property(TARGET BeliefPropagation PROPERTY CXX_STANDARD 17)
+
 
 add_executable(mis_train mis_train.cpp)
 target_link_libraries(mis_train PRIVATE "${TORCH_LIBRARIES}")

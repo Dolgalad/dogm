@@ -472,7 +472,7 @@ struct FactorThetaPredictor : torch::nn::Module {
 
 		Tensor q = torch::zeros(theta.sizes(),{x.device()});
 
-		Tensor r = sum_product_loopy_belief_propagation(theta, q, *data.bp_edges, *data.fg, bp_max_iter, bp_tol);
+		Tensor r = sum_product_loopy_belief_propagation(theta, q, *data.bp_edges, bp_max_iter, bp_tol);
 		//auto forward_stop = high_resolution_clock::now();
 		//cout << torch::all(theta == theta_tmp) << endl;
 		//cout << "forward time = " << duration_cast<microseconds>(forward_stop-forward_start).count() << endl;
@@ -546,6 +546,14 @@ int main(int argc, char ** argv) {
 	parser.add_argument("--load-model")
 		.help("load model from checkpoint (default: None)")
 		.default_value("");
+	parser.add_argument("-m", "--bp-max-iter")
+		.help("maximum belief propagation iterations (default: 100)")
+		.default_value(100)
+		.scan<'i',int>();
+	parser.add_argument("-m", "--bp-tol")
+		.help("belief propagation tolerance(default: 1e-4)")
+		.default_value(1e-4)
+		.scan<'g',double>();
 
 
 	try {
@@ -568,6 +576,8 @@ int main(int argc, char ** argv) {
 	int num_workers = parser.get<int>("--num-workers");
 	bool overwrite = parser.get<bool>("--overwrite");
 	double val_split = parser.get<double>("--split");
+	int bp_max_iter = parser.get<int>("--bp-max-iter");
+	double bp_tol = parser.get<double>("--bp-tol");
 
 	torch::Device device = torch::kCPU;
 	if (torch::cuda::is_available()) {
@@ -594,7 +604,7 @@ int main(int argc, char ** argv) {
 	}
 
 	//initialize model
-	auto mnet = make_shared<struct FactorThetaPredictor>();
+	auto mnet = make_shared<struct FactorThetaPredictor>(bp_max_iter, bp_tol);
 	mnet->to(device,true);
 
 	torch::optim::Adam optimizer(mnet->parameters(), /*lr=*/lr);
@@ -660,11 +670,6 @@ int main(int argc, char ** argv) {
 
 			pred = mnet->forward(xx, batch.data->edge_index, *batch.data);
 
-			//loss = torch::binary_cross_entropy(
-			//		//pred.index({strd.to(device)}).clamp_(0,1),
-			//		pred.index({batch.data->var_marginal_mask}).clamp(0,1),
-			//		batch.data->y.to(torch::kFloat).clamp(0,1)
-			//		);
 			loss = torch::binary_cross_entropy(
 					pred.clamp(0,1),
 					batch.data->y_ind

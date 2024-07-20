@@ -52,7 +52,7 @@ struct FGEdges {
 	void make_edges(struct FactorGraph& fg);
 };
 
-Tensor sum_product_loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, FactorGraph& fg, int max_iter, double tol);
+Tensor sum_product_loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, int max_iter, double tol);
 Tensor loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, FactorGraph& fg, string mode, int max_iter, double tol);
 
 #endif

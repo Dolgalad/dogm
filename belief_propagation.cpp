@@ -279,7 +279,7 @@ void FGEdges::make_edges(struct FactorGraph& fg) {
 
 // Loopy Belief Propagation
 
-Tensor sum_product_loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, FactorGraph& fg, int max_iter=100, double tol=1e-8) {
+Tensor sum_product_loopy_belief_propagation(Tensor& theta, Tensor& q, FGEdges& edges, int max_iter=100, double tol=1e-8) {
 	torch::Device device = theta.device();
 
 	int nSS = edges.num_ss.sum().item<int>();
