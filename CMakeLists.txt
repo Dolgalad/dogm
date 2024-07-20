@@ -49,7 +49,7 @@ if(Boost_FOUND)
 
     add_executable(test_dataset test_dataset.cpp )
     target_link_libraries(test_dataset PRIVATE "${TORCH_LIBRARIES}")
-    target_link_libraries(torch_boost_cplex_example LINK_PUBLIC ${Boost_LIBRARIES})
+    target_link_libraries(test_dataset LINK_PUBLIC ${Boost_LIBRARIES})
 
 endif()
 
